@@ -20,7 +20,9 @@ import urllib.request
 import yaml
 
 
-PREFS_PATH = Path(__file__).resolve().with_name("prefs.yaml")
+PREFS_PATH = Path(__file__).resolve().with_name("prefs.yml")
+if not PREFS_PATH.exists() and PREFS_PATH.with_suffix(".yaml").exists():
+    PREFS_PATH = PREFS_PATH.with_suffix(".yaml")
 SCHEMES = {
     "Bright": ("#f8cbad", "#ffe699", "#a9d18e", "#9dc3e6", "#d9b3e6", "#f4b6c2"),
     "Ocean": ("#a9d6e5", "#89c2d9", "#b8e0d2", "#c5d5ea", "#d7e3fc"),

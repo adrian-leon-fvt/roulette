@@ -10,4 +10,6 @@ dist/
 .env
 prefs.yaml
 prefs.yaml.*
+prefs.yml
+prefs.yml.*
 .roulette-*.tmp

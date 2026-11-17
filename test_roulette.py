@@ -3,6 +3,7 @@ import io
 import json
 import os
 from pathlib import Path
+import runpy
 import unittest
 from unittest import mock
 import uuid
@@ -15,6 +16,14 @@ def person(name, enabled=True, cooldown=0):
 
 
 class RouletteTests(unittest.TestCase):
+    def test_prefers_yml_and_keeps_legacy_yaml_supported(self):
+        for existence, suffix in [([True], ".yml"), ([False, True], ".yaml"),
+                                  ([False, False], ".yml")]:
+            with self.subTest(suffix=suffix, existence=existence):
+                with mock.patch.object(roulette.Path, "exists", side_effect=existence):
+                    module = runpy.run_path(roulette.__file__, run_name="prefs_path_check")
+                self.assertEqual(module["PREFS_PATH"].suffix, suffix)
+
     def setUp(self):
         self.prefs = roulette.default_prefs()
         self.prefs["names"] = [person(name) for name in "ABCDE"]

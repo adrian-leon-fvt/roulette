@@ -55,7 +55,7 @@ QRNG_TOKEN=your-api-key
 
 Replace the placeholder with your actual key. Restart the application after
 changing credentials. Never commit your token; `.env` is ignored, and the app
-does not write tokens into `prefs.yaml`.
+does not write tokens into `prefs.yml`.
 
 ## No token or service unavailable
 
@@ -75,10 +75,11 @@ administrator to fix the certificate chain; do not disable certificate checks.
 
 ## Preferences
 
-`prefs.yaml` beside the script holds names, enabled states, cooldown counters,
+`prefs.yml` beside the script holds names, enabled states, cooldown counters,
 speed, colours, last run and last winner. It and dependencies are excluded
 from Git. Close the application before editing this file. Keep only one
 instance running against it.
 
-To reset, close the app and move `prefs.yaml` elsewhere. Invalid preferences
-produce an error instead of being overwritten.
+Existing `prefs.yaml` files are used when no `prefs.yml` exists.
+To reset, close the app and move either preferences file elsewhere. Invalid
+preferences produce an error instead of being overwritten.

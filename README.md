@@ -43,11 +43,12 @@ HTTP requests run off the UI thread.
   down or disabled, return or enable someone before spinning.
 - Speed slider changes spin speed; colour scheme changes slice colours.
 
-Preferences save to ignored `prefs.yaml` beside the script: names, enabled
+Preferences save to ignored `prefs.yml` beside the script: names, enabled
 state, cooldowns, speed, colour scheme, last run and last winner. The result
 is saved before its animation, so closing during animation does not lose it.
 Invalid preferences are reported rather than silently replaced; repair or move
-the file to reset. Do not run multiple instances against the same preferences.
+the file to reset. Existing `prefs.yaml` files remain supported when no
+`prefs.yml` exists. Do not run multiple instances against the same preferences.
 
 ## Checks
 
