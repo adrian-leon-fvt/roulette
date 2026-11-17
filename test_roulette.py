@@ -146,6 +146,40 @@ class RouletteTests(unittest.TestCase):
                           (index + 0.5) * 360 / count) % 360
                 self.assertAlmostEqual(center, 90)
 
+    def test_manual_cooldown_and_return_persist_without_a_win(self):
+        try:
+            root = roulette.tk.Tk()
+        except roulette.tk.TclError:
+            self.skipTest("Tk display unavailable")
+        self.addCleanup(root.destroy)
+        save = roulette.save_prefs
+        with mock.patch.object(roulette, "save_prefs",
+                               side_effect=lambda state: save(state, self.path)):
+            app = roulette.Roulette(root, self.prefs)
+            root.update()
+            app.cooldown_button.invoke()
+            self.assertIn("Select a name", app.status.get())
+            app.names_list.selection_set(0)
+            app.set_busy(True)
+            app.send_to_cooldown()
+            self.assertIn("A", roulette.eligible(app.prefs["names"]))
+            self.assertIn("disabled", app.cooldown_button.state())
+            app.set_busy(False)
+            with mock.patch.object(roulette, "save_prefs", side_effect=OSError("disk full")):
+                app.cooldown_button.invoke()
+            self.assertIn("Save failed", app.status.get())
+            self.assertIn("A", roulette.eligible(app.prefs["names"]))
+            app.cooldown_button.invoke()
+            self.assertNotIn("A", roulette.eligible(app.prefs["names"]))
+            self.assertEqual(app.cool_items[0]["cooldown"], 3)
+            self.assertIsNone(app.prefs["last_winner"])
+            self.assertEqual(roulette.load_prefs(self.path), app.prefs)
+            app.cool_list.selection_set(0)
+            app.return_button.invoke()
+            self.assertIn("A", roulette.eligible(app.prefs["names"]))
+            self.assertEqual(app.prefs["names"][0]["cooldown"], 0)
+            self.assertEqual(roulette.load_prefs(self.path), app.prefs)
+
     def test_committed_winner_appears_in_cooldown_during_animation(self):
         try:
             root = roulette.tk.Tk()

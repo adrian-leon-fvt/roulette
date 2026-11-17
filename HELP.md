@@ -15,6 +15,8 @@ activation needed. See [README.md](README.md) for platform requirements.
 Add names, enable those participating, choose speed and colours, then spin.
 Winners sit in **Cooldown** for three subsequent completed spins.
 **Return to wheel** puts someone back immediately and clears their counter.
+Select anyone in Names and choose **Send to cooldown** to start a three-turn
+cooldown manually, without picking them as a winner.
 If no one can participate, enable or return someone; blocked spins do not
 count as turns.
 

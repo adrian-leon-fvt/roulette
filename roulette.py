@@ -253,6 +253,9 @@ class Roulette:
         self.names_list = self.make_list(main_list)
         self.names_list.bind("<space>", self.toggle_key)
         self.names_list.bind("<Delete>", self.remove_key)
+        self.cooldown_button = ttk.Button(main_list, text="Send to cooldown",
+                                          command=self.send_to_cooldown)
+        self.cooldown_button.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
         row = ttk.Frame(panel)
         row.grid(row=4, column=0, sticky="ew", pady=4)
         self.toggle_button = ttk.Button(row, text="Enable / disable", command=self.toggle)
@@ -418,6 +421,18 @@ class Roulette:
         if self.save_change(updated, True):
             self.status.set("Name updated.")
 
+    def send_to_cooldown(self):
+        if self.busy:
+            return
+        name = self.selected()
+        if name is None:
+            self.status.set("Select a name to send to cooldown.")
+            return
+        updated = copy.deepcopy(self.prefs)
+        next(item for item in updated["names"] if item["name"] == name)["cooldown"] = 3
+        if self.save_change(updated, True):
+            self.status.set("Name sent to cooldown for 3 turns.")
+
     def return_to_wheel(self):
         if self.busy:
             return
@@ -455,7 +470,8 @@ class Roulette:
         state = "disabled" if busy else "normal"
         for widget in (self.input, self.names_list, self.cool_list, self.add_button,
                        self.toggle_button, self.remove_button, self.return_button,
-                       self.remove_cool_button, self.speed_scale, self.spin_button):
+                       self.cooldown_button, self.remove_cool_button,
+                       self.speed_scale, self.spin_button):
             widget.configure(state=state)
         self.scheme.configure(state="disabled" if busy else "readonly")
 

@@ -38,6 +38,8 @@ HTTP requests run off the UI thread.
 - Each winner moves into **Cooldown** for the next **three completed spins**.
   Remaining turns appear beside their name.
 - **Return to wheel** clears that person's cooldown immediately.
+- **Send to cooldown** moves any selected name out of the wheel for three turns,
+  without requiring a win. You can return them whenever you choose.
 - Manually disabled names stay disabled until enabled.
 - Failed or blocked spins do not advance cooldowns. If everyone is cooling
   down or disabled, return or enable someone before spinning.
