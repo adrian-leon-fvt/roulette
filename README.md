@@ -5,23 +5,19 @@ dedicated cooldown space. Names and preferences stay on your machine.
 
 ## Run (Windows)
 
-Requires Python 3.11+ with Tkinter (included in the standard Windows installer).
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run
+from this folder:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe roulette.py
+uv run roulette.py
 ```
 
-With [uv](https://docs.astral.sh/uv/), setup can instead use:
+uv automatically prepares Python 3.13, the ignored `.venv` and dependencies
+from `uv.lock`; no activation or separate install step needed. Tkinter is
+required and included in uv's managed Windows Python. On Linux, your Python
+installation may need the system Tk package.
 
-```powershell
-uv venv --python 3.13
-uv pip install --python .\.venv\Scripts\python.exe -r requirements.txt
-.\.venv\Scripts\python.exe roulette.py
-```
-
-VS Code: **Terminal > Run Task > Run roulette** after setup.
+VS Code: **Terminal > Run Task > Run roulette**.
 
 ## Quantum source
 
@@ -56,7 +52,7 @@ the file to reset. Do not run multiple instances against the same preferences.
 ## Checks
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest -v
+uv run python -m unittest -v
 ```
 
 Tests use mocked quantum responses, not API credits.

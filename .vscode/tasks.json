@@ -4,16 +4,16 @@
         {
             "label": "Run roulette",
             "type": "process",
-            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-            "args": ["roulette.py"],
+            "command": "uv",
+            "args": ["run", "roulette.py"],
             "options": {"cwd": "${workspaceFolder}"},
             "problemMatcher": []
         },
         {
             "label": "Test roulette",
             "type": "process",
-            "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-            "args": ["-m", "unittest", "-v"],
+            "command": "uv",
+            "args": ["run", "python", "-m", "unittest", "-v"],
             "options": {"cwd": "${workspaceFolder}"},
             "group": "test",
             "problemMatcher": []

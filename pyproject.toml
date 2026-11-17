@@ -1,0 +1,6 @@
+[project]
+name = "quantum-roulette"
+version = "0.1.0"
+description = "Local quantum-random name wheel with a three-turn cooldown"
+requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0.2,<7"]

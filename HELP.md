@@ -2,13 +2,15 @@
 
 ## Start the application
 
-Install Python 3.11+ with Tkinter, then run these commands from this folder:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run
+from this folder:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe roulette.py
+uv run roulette.py
 ```
+
+uv prepares Python and dependencies automatically; no virtual-environment
+activation needed. See [README.md](README.md) for platform requirements.
 
 Add names, enable those participating, choose speed and colours, then spin.
 Winners sit in **Cooldown** for three subsequent completed spins.
