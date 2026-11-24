@@ -9,6 +9,7 @@ from pathlib import Path
 import queue
 import re
 import secrets
+import sys
 import tempfile
 import threading
 import time
@@ -31,13 +32,17 @@ SCHEMES = {
 
 
 def default_prefs():
-    return {"names": [], "speed": 5, "scheme": "Bright",
+    return {"names": [], "duration": 3, "scheme": "Bright",
             "last_run": None, "last_winner": None, "last_source": None}
+
+
+def valid_duration(value):
+    return type(value) in (int, float) and 0 < value <= sys.float_info.max
 
 
 def validate_prefs(prefs):
     if not isinstance(prefs, dict) or set(prefs) != set(default_prefs()):
-        raise ValueError("Expected names, speed, scheme, last_run, last_winner and last_source.")
+        raise ValueError("Expected names, duration, scheme, last_run, last_winner and last_source.")
     if not isinstance(prefs["names"], list):
         raise ValueError("Names must be a list.")
     seen = set()
@@ -51,8 +56,8 @@ def validate_prefs(prefs):
         if type(enabled) is not bool or type(cooldown) is not int or not 0 <= cooldown <= 3:
             raise ValueError("Enabled must be boolean and cooldown must be 0–3.")
         seen.add(name.casefold())
-    if type(prefs["speed"]) is not int or not 1 <= prefs["speed"] <= 10:
-        raise ValueError("Speed must be an integer from 1 to 10.")
+    if not valid_duration(prefs["duration"]):
+        raise ValueError("Duration must be a positive finite number of seconds.")
     if not isinstance(prefs["scheme"], str) or prefs["scheme"] not in SCHEMES:
         raise ValueError("Unknown color scheme.")
     if prefs["last_winner"] is not None and (
@@ -86,7 +91,13 @@ def load_prefs(path=PREFS_PATH):
         return default_prefs()
     try:
         with path.open(encoding="utf-8") as file:
-            return validate_prefs(yaml.safe_load(file))
+            prefs = yaml.safe_load(file)
+        if isinstance(prefs, dict) and "speed" in prefs and "duration" not in prefs:
+            if type(prefs["speed"]) is not int or not 1 <= prefs["speed"] <= 10:
+                raise ValueError("Speed must be an integer from 1 to 10.")
+            del prefs["speed"]
+            prefs["duration"] = 3
+        return validate_prefs(prefs)
     except (OSError, UnicodeError, yaml.YAMLError, ValueError) as exc:
         raise ValueError(f"Cannot load preferences: {exc}") from exc
 
@@ -284,13 +295,12 @@ class Roulette:
         options = ttk.Frame(wheel)
         options.grid(row=1, column=0, sticky="ew", pady=5)
         options.columnconfigure(1, weight=1)
-        ttk.Label(options, text="Speed").grid(row=0, column=0, sticky="w")
-        self.speed = tk.IntVar(value=prefs["speed"])
-        self.speed_scale = ttk.Scale(options, from_=1, to=10, variable=self.speed,
-                                     command=self.change_speed)
-        self.speed_scale.grid(row=0, column=1, sticky="ew", padx=8)
-        self.speed_label = ttk.Label(options, text=str(prefs["speed"]), width=2)
-        self.speed_label.grid(row=0, column=2)
+        ttk.Label(options, text="Spin duration (seconds)").grid(row=0, column=0, sticky="w")
+        self.duration = tk.StringVar(value=str(prefs["duration"]))
+        self.duration_entry = ttk.Entry(options, textvariable=self.duration)
+        self.duration_entry.grid(row=0, column=1, sticky="ew", padx=8)
+        self.duration_entry.bind("<FocusOut>", self.change_duration)
+        self.duration_entry.bind("<Return>", self.change_duration)
         ttk.Label(options, text="Color scheme").grid(row=1, column=0, sticky="w")
         self.scheme = ttk.Combobox(options, values=list(SCHEMES), state="readonly")
         self.scheme.set(prefs["scheme"])
@@ -449,17 +459,25 @@ class Roulette:
         if self.save_change(updated, True):
             self.status.set("Name returned to wheel.")
 
-    def change_speed(self, value):
-        if not hasattr(self, "speed_label") or self.busy:
-            return
-        speed = max(1, min(10, round(float(value))))
-        self.speed_label.configure(text=str(speed))
-        if speed != self.prefs["speed"]:
+    def change_duration(self, event=None):
+        if self.busy:
+            return False
+        try:
+            duration = float(self.duration.get())
+        except ValueError:
+            self.status.set("Enter a positive finite spin duration in seconds.")
+            return False
+        if not valid_duration(duration):
+            self.status.set("Enter a positive finite spin duration in seconds.")
+            return False
+        if duration != self.prefs["duration"]:
             updated = copy.deepcopy(self.prefs)
-            updated["speed"] = speed
+            updated["duration"] = duration
             if not self.save_change(updated):
-                self.speed.set(self.prefs["speed"])
-                self.speed_label.configure(text=str(self.prefs["speed"]))
+                return False
+        if event is not None:
+            self.status.set("Spin duration set.")
+        return True
 
     def change_scheme(self, event=None):
         updated = copy.deepcopy(self.prefs)
@@ -475,7 +493,7 @@ class Roulette:
         for widget in (self.input, self.names_list, self.cool_list, self.add_button,
                        self.toggle_button, self.remove_button, self.return_button,
                        self.cooldown_button, self.remove_cool_button,
-                       self.speed_scale, self.spin_button, self.test_button):
+                       self.duration_entry, self.spin_button, self.test_button):
             widget.configure(state=state)
         self.scheme.configure(state="disabled" if busy else "readonly")
 
@@ -485,6 +503,8 @@ class Roulette:
         names = eligible(self.prefs["names"])
         if not names:
             self.status.set("No eligible names. Return someone from cooldown or enable a name.")
+            return
+        if not self.change_duration():
             return
         self.set_busy(True)
         if test:
@@ -528,7 +548,7 @@ class Roulette:
         start = self.rotation % 360
         end = target_angle(index, len(names))
         distance = 360 * 4 + (end - start) % 360
-        duration = distance / (150 + self.prefs["speed"] * 100) * 3
+        duration = self.prefs["duration"]
         started = time.monotonic()
         self.status.set(f"Spinning… {source}")
 

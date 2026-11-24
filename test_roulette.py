@@ -75,7 +75,9 @@ class RouletteTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cannot load preferences"):
             roulette.load_prefs(self.path)
         self.assertEqual(self.path.read_text(encoding="utf-8"), "names: [broken")
-        for key, value in [("speed", True), ("speed", 11), ("scheme", "bad"),
+        for key, value in [("duration", True), ("duration", 0), ("duration", -1),
+                           ("duration", float("inf")), ("duration", float("nan")),
+                           ("duration", 10 ** 400), ("scheme", "bad"),
                            ("last_run", "invalid")]:
             invalid = copy.deepcopy(state)
             invalid[key] = value
@@ -86,6 +88,17 @@ class RouletteTests(unittest.TestCase):
             invalid["names"][0][field] = value
             with self.subTest(field=field, value=value), self.assertRaises(ValueError):
                 roulette.validate_prefs(invalid)
+
+    def test_load_legacy_speed_preferences(self):
+        legacy = copy.deepcopy(self.prefs)
+        del legacy["duration"]
+        legacy["speed"] = 5
+        self.path.write_text(roulette.yaml.safe_dump(legacy), encoding="utf-8")
+        self.assertEqual(roulette.load_prefs(self.path), self.prefs)
+        legacy["speed"] = False
+        self.path.write_text(roulette.yaml.safe_dump(legacy), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "Speed"):
+            roulette.load_prefs(self.path)
 
     def test_atomic_save_failure_preserves_existing_file(self):
         roulette.save_prefs(self.prefs, self.path)
@@ -235,6 +248,43 @@ class RouletteTests(unittest.TestCase):
             self.assertFalse(app.busy)
             save.assert_not_called()
             token.assert_not_called()
+
+    def test_duration_validation_and_animation(self):
+        try:
+            root = roulette.tk.Tk()
+        except roulette.tk.TclError:
+            self.skipTest("Tk display unavailable")
+        self.addCleanup(root.destroy)
+        save = roulette.save_prefs
+        with mock.patch.object(roulette, "save_prefs",
+                               side_effect=lambda state: save(state, self.path)):
+            app = roulette.Roulette(root, self.prefs)
+            root.update()
+            self.assertEqual(app.duration.get(), "3")
+            for value in ("", "0", "-1", "nan", "inf", "abc"):
+                app.duration.set(value)
+                app.test_button.invoke()
+                self.assertIn("positive finite", app.status.get())
+                self.assertFalse(app.busy)
+            self.assertFalse(self.path.exists())
+            app.duration.set("1.5")
+            with mock.patch.object(roulette, "save_prefs", side_effect=OSError("disk full")):
+                app.test_button.invoke()
+                self.assertIn("Save failed", app.status.get())
+                self.assertFalse(app.busy)
+                self.assertEqual(app.duration.get(), "1.5")
+            with mock.patch.object(roulette.secrets, "randbelow", return_value=0), \
+                 mock.patch.object(roulette.time, "monotonic",
+                                   side_effect=[0, 0, 0.75, 1.5]), \
+                 mock.patch.object(root, "after") as after:
+                app.test_button.invoke()
+                self.assertTrue(app.busy)
+                self.assertEqual(roulette.load_prefs(self.path)["duration"], 1.5)
+                after.call_args.args[1]()
+                self.assertTrue(app.busy)
+                after.call_args.args[1]()
+                self.assertFalse(app.busy)
+            self.assertEqual(app.rotation, roulette.target_angle(0, 5))
 
 
 if __name__ == "__main__":

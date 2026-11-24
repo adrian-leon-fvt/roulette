@@ -12,7 +12,8 @@ uv run roulette.py
 uv prepares Python and dependencies automatically; no virtual-environment
 activation needed. See [README.md](README.md) for platform requirements.
 
-Add names, enable those participating, choose speed and colours, then spin.
+Add names, enable those participating, choose spin duration in seconds and
+colours, then spin. Duration defaults to 3 seconds and accepts decimals.
 Winners sit in **Cooldown** for three subsequent completed spins.
 **Return to wheel** puts someone back immediately and clears their counter.
 Select anyone in Names and choose **Send to cooldown** to start a three-turn
@@ -79,7 +80,7 @@ administrator to fix the certificate chain; do not disable certificate checks.
 ## Preferences
 
 `prefs.yml` beside the script holds names, enabled states, cooldown counters,
-speed, colours, last run and last winner. It and dependencies are excluded
+duration, colours, last run and last winner. It and dependencies are excluded
 from Git. Close the application before editing this file. Keep only one
 instance running against it.
 

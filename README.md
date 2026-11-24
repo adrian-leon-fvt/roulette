@@ -45,10 +45,11 @@ HTTP requests run off the UI thread.
   down or disabled, return or enable someone before spinning.
 - **Test run** spins using local randomness without saving a winner or changing
   cooldowns; it does not contact the QRNG service.
-- Speed slider changes spin speed; colour scheme changes slice colours.
+- Spin duration sets animation time in seconds (default: 3; decimals allowed);
+  colour scheme changes slice colours.
 
 Preferences save to ignored `prefs.yml` beside the script: names, enabled
-state, cooldowns, speed, colour scheme, last run and last winner. The result
+state, cooldowns, duration, colour scheme, last run and last winner. The result
 is saved before its animation, so closing during animation does not lose it.
 Invalid preferences are reported rather than silently replaced; repair or move
 the file to reset. Existing `prefs.yaml` files remain supported when no
