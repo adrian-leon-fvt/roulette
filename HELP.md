@@ -21,6 +21,8 @@ cooldown manually, without picking them as a winner.
 If no one can participate, enable or return someone; blocked spins do not
 count as turns.
 **Test run** spins without saving a winner, changing cooldowns, or using QRNG.
+Uncheck **Celebrate winner** to turn off the post-spin animation for this
+session. On Windows, it starts disabled if system animations are disabled.
 
 ## Enable quantum randomness
 

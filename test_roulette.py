@@ -205,7 +205,8 @@ class RouletteTests(unittest.TestCase):
             root.update()
             app.set_busy(True)
             app.queue.put((0, "System randomness (fallback: no QRNG_TOKEN)"))
-            app.poll(["A"])
+            with mock.patch.object(root, "after"):
+                app.poll(["A"])
             self.assertTrue(any(app.canvas.type(item) == "oval"
                                 for item in app.canvas.find_all()))
             self.assertEqual(app.cool_list.size(), 1)
@@ -235,12 +236,14 @@ class RouletteTests(unittest.TestCase):
              mock.patch.object(roulette.time, "monotonic", side_effect=[0, 0, 100000]):
             app = roulette.Roulette(root, self.prefs)
             root.update()
-            with mock.patch.object(root, "after") as after:
+            with mock.patch.object(root, "after") as after, \
+                 mock.patch.object(app, "celebrate") as celebrate:
                 app.test_button.invoke()
                 self.assertTrue(app.busy)
                 self.assertIn("disabled", app.test_button.state())
                 self.assertIn("disabled", app.spin_button.state())
                 after.call_args.args[1]()
+                celebrate.assert_not_called()
             self.assertEqual(app.prefs, before)
             self.assertEqual(app.result.get(), "Last winner: B\nSource: Earlier spin")
             self.assertEqual(app.rotation, roulette.target_angle(0, 4))
@@ -285,6 +288,56 @@ class RouletteTests(unittest.TestCase):
                 after.call_args.args[1]()
                 self.assertFalse(app.busy)
             self.assertEqual(app.rotation, roulette.target_angle(0, 5))
+
+    def test_winner_celebration_and_opt_out(self):
+        for enabled in (True, False):
+            with self.subTest(enabled=enabled):
+                try:
+                    root = roulette.tk.Tk()
+                except roulette.tk.TclError:
+                    self.skipTest("Tk display unavailable")
+                try:
+                    with mock.patch.object(roulette, "animations_enabled", return_value=True), \
+                         mock.patch.object(roulette, "save_prefs"), \
+                         mock.patch.object(roulette.time, "monotonic",
+                                           side_effect=[0, 3, 3, 3.8, 5]):
+                        app = roulette.Roulette(root, copy.deepcopy(self.prefs))
+                        root.update()
+                        if not enabled:
+                            app.celebration_check.invoke()
+                        self.assertEqual(app.celebration_enabled.get(), enabled)
+                        app.set_busy(True)
+                        app.queue.put((0, "Test source"))
+                        with mock.patch.object(root, "after") as after:
+                            app.poll(roulette.eligible(app.prefs["names"]))
+                            self.assertIn("Last winner: A", app.result.get())
+                            if enabled:
+                                self.assertTrue(app.busy)
+                                items = app.canvas.find_withtag("celebration")
+                                self.assertEqual(len(items), 34)
+                                self.assertTrue(any(app.canvas.type(item) == "text"
+                                                    and app.canvas.itemcget(item, "text") == "A"
+                                                    for item in items))
+                                after.call_args.args[1]()
+                            self.assertFalse(app.busy)
+                            self.assertFalse(app.canvas.find_withtag("celebration"))
+                finally:
+                    root.destroy()
+
+    def test_windows_animation_preference(self):
+        with mock.patch.object(roulette.sys, "platform", "win32"), \
+             mock.patch.object(roulette.ctypes, "windll", create=True) as windll:
+            def system_info(action, unused, value, flags):
+                self.assertEqual(action, 0x1042)
+                roulette.ctypes.cast(value, roulette.ctypes.POINTER(roulette.ctypes.c_int))[0] = 1
+                return 1
+            windll.user32.SystemParametersInfoW.side_effect = system_info
+            self.assertTrue(roulette.animations_enabled())
+            windll.user32.SystemParametersInfoW.side_effect = None
+            windll.user32.SystemParametersInfoW.return_value = 1
+            self.assertFalse(roulette.animations_enabled())
+            windll.user32.SystemParametersInfoW.return_value = 0
+            self.assertFalse(roulette.animations_enabled())
 
 
 if __name__ == "__main__":

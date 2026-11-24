@@ -1,6 +1,7 @@
 """Local name roulette. Run with Python, Tkinter, and PyYAML."""
 
 import copy
+import ctypes
 import datetime
 import json
 import math
@@ -234,6 +235,14 @@ def target_angle(index, count):
     return (90 - (index + 0.5) * 360 / count) % 360
 
 
+def animations_enabled():
+    if sys.platform != "win32":
+        return True
+    enabled = ctypes.c_int()
+    return bool(ctypes.windll.user32.SystemParametersInfoW(
+        0x1042, 0, ctypes.byref(enabled), 0) and enabled.value)
+
+
 class Roulette:
     def __init__(self, root, prefs):
         self.root, self.prefs = root, prefs
@@ -306,6 +315,10 @@ class Roulette:
         self.scheme.set(prefs["scheme"])
         self.scheme.grid(row=1, column=1, sticky="ew", padx=8)
         self.scheme.bind("<<ComboboxSelected>>", self.change_scheme)
+        self.celebration_enabled = tk.BooleanVar(value=animations_enabled())
+        self.celebration_check = ttk.Checkbutton(
+            options, text="Celebrate winner", variable=self.celebration_enabled)
+        self.celebration_check.grid(row=2, column=0, columnspan=2, sticky="w")
         buttons = ttk.Frame(wheel)
         buttons.grid(row=2, column=0, sticky="ew", pady=5)
         self.spin_button = ttk.Button(buttons, text="Spin", command=self.spin)
@@ -493,7 +506,8 @@ class Roulette:
         for widget in (self.input, self.names_list, self.cool_list, self.add_button,
                        self.toggle_button, self.remove_button, self.return_button,
                        self.cooldown_button, self.remove_cool_button,
-                       self.duration_entry, self.spin_button, self.test_button):
+                       self.duration_entry, self.celebration_check,
+                       self.spin_button, self.test_button):
             widget.configure(state=state)
         self.scheme.configure(state="disabled" if busy else "readonly")
 
@@ -563,6 +577,45 @@ class Roulette:
                 self.draw()
                 self.result.set(self.result_text())
                 self.status.set(f"Spin complete. {source}")
+                if not test and self.celebration_enabled.get():
+                    self.celebrate(names[index])
+                else:
+                    self.set_busy(False)
+
+        animate()
+
+    def celebrate(self, winner):
+        started = time.monotonic()
+        label_font = font.Font(font=font.nametofont("TkDefaultFont"))
+        label_font.configure(weight="bold", size=36)
+        max_size = min(36, max(8, int(36 * self.canvas.winfo_width() * 0.7 /
+                                       max(1, label_font.measure(winner)))))
+
+        def animate():
+            progress = min(1.0, (time.monotonic() - started) / 2)
+            self.draw()
+            width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
+            for i in range(32):
+                x = (i * 73 + 19) % max(1, width)
+                y = (i * 113 + progress * height * 1.4) % (height + 40) - 20
+                self.canvas.create_rectangle(x, y, x + 7, y + 11,
+                                             fill=("#c62828", "#1565c0", "#2e7d32",
+                                                   "#ad1457", "#ef6c00")[i % 5],
+                                             outline="", tags="celebration")
+            growth = min(1.0, progress * 2)
+            label_font.configure(size=max(1, int(max_size * (0.4 + 0.6 * growth))))
+            text = self.canvas.create_text(
+                width / 2, height / 2, text=winner, font=label_font, fill="black",
+                angle=360 * (1 - (1 - growth) ** 2), tags="celebration")
+            x1, y1, x2, y2 = self.canvas.bbox(text)
+            background = self.canvas.create_rectangle(x1 - 12, y1 - 8, x2 + 12, y2 + 8,
+                                                      fill="white", outline="#222222",
+                                                      tags="celebration")
+            self.canvas.tag_lower(background, text)
+            if progress < 1:
+                self.root.after(16, animate)
+            else:
+                self.draw()
                 self.set_busy(False)
 
         animate()

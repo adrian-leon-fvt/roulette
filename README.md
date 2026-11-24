@@ -47,6 +47,9 @@ HTTP requests run off the UI thread.
   cooldowns; it does not contact the QRNG service.
 - Spin duration sets animation time in seconds (default: 3; decimals allowed);
   colour scheme changes slice colours.
+- Winners get a short confetti animation after the spin. Uncheck **Celebrate
+  winner** to disable it for this session; on Windows it defaults off when
+  system animations are disabled.
 
 Preferences save to ignored `prefs.yml` beside the script: names, enabled
 state, cooldowns, duration, colour scheme, last run and last winner. The result
