@@ -19,6 +19,7 @@ Select anyone in Names and choose **Send to cooldown** to start a three-turn
 cooldown manually, without picking them as a winner.
 If no one can participate, enable or return someone; blocked spins do not
 count as turns.
+**Test run** spins without saving a winner, changing cooldowns, or using QRNG.
 
 ## Enable quantum randomness
 

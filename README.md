@@ -43,6 +43,8 @@ HTTP requests run off the UI thread.
 - Manually disabled names stay disabled until enabled.
 - Failed or blocked spins do not advance cooldowns. If everyone is cooling
   down or disabled, return or enable someone before spinning.
+- **Test run** spins using local randomness without saving a winner or changing
+  cooldowns; it does not contact the QRNG service.
 - Speed slider changes spin speed; colour scheme changes slice colours.
 
 Preferences save to ignored `prefs.yml` beside the script: names, enabled

@@ -206,6 +206,36 @@ class RouletteTests(unittest.TestCase):
             self.assertIn("A", roulette.eligible(app.prefs["names"]))
             self.assertNotIn("B", roulette.eligible(app.prefs["names"]))
 
+    def test_test_run_only_spins(self):
+        try:
+            root = roulette.tk.Tk()
+        except roulette.tk.TclError:
+            self.skipTest("Tk display unavailable")
+        self.addCleanup(root.destroy)
+        self.prefs["names"][1]["cooldown"] = 2
+        self.prefs.update(last_winner="B", last_run="2026-11-24T11:00:00-07:00",
+                          last_source="Earlier spin")
+        before = copy.deepcopy(self.prefs)
+        with mock.patch.object(roulette, "save_prefs") as save, \
+             mock.patch.object(roulette, "read_token") as token, \
+             mock.patch.object(roulette.secrets, "randbelow", return_value=0), \
+             mock.patch.object(roulette.time, "monotonic", side_effect=[0, 0, 100000]):
+            app = roulette.Roulette(root, self.prefs)
+            root.update()
+            with mock.patch.object(root, "after") as after:
+                app.test_button.invoke()
+                self.assertTrue(app.busy)
+                self.assertIn("disabled", app.test_button.state())
+                self.assertIn("disabled", app.spin_button.state())
+                after.call_args.args[1]()
+            self.assertEqual(app.prefs, before)
+            self.assertEqual(app.result.get(), "Last winner: B\nSource: Earlier spin")
+            self.assertEqual(app.rotation, roulette.target_angle(0, 4))
+            self.assertIn("Test run", app.status.get())
+            self.assertFalse(app.busy)
+            save.assert_not_called()
+            token.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

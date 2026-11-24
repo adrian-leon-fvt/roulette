@@ -296,8 +296,12 @@ class Roulette:
         self.scheme.set(prefs["scheme"])
         self.scheme.grid(row=1, column=1, sticky="ew", padx=8)
         self.scheme.bind("<<ComboboxSelected>>", self.change_scheme)
-        self.spin_button = ttk.Button(wheel, text="Spin", command=self.spin)
-        self.spin_button.grid(row=2, column=0, sticky="ew", pady=5)
+        buttons = ttk.Frame(wheel)
+        buttons.grid(row=2, column=0, sticky="ew", pady=5)
+        self.spin_button = ttk.Button(buttons, text="Spin", command=self.spin)
+        self.spin_button.pack(side="left", fill="x", expand=True)
+        self.test_button = ttk.Button(buttons, text="Test run", command=lambda: self.spin(test=True))
+        self.test_button.pack(side="left", fill="x", expand=True)
         self.result = tk.StringVar(value=self.result_text())
         ttk.Label(wheel, textvariable=self.result, wraplength=420).grid(row=3, column=0, sticky="ew")
         self.status = tk.StringVar(value="Ready.")
@@ -471,11 +475,11 @@ class Roulette:
         for widget in (self.input, self.names_list, self.cool_list, self.add_button,
                        self.toggle_button, self.remove_button, self.return_button,
                        self.cooldown_button, self.remove_cool_button,
-                       self.speed_scale, self.spin_button):
+                       self.speed_scale, self.spin_button, self.test_button):
             widget.configure(state=state)
         self.scheme.configure(state="disabled" if busy else "readonly")
 
-    def spin(self):
+    def spin(self, test=False):
         if self.busy:
             return
         names = eligible(self.prefs["names"])
@@ -483,6 +487,10 @@ class Roulette:
             self.status.set("No eligible names. Return someone from cooldown or enable a name.")
             return
         self.set_busy(True)
+        if test:
+            self.queue.put((secrets.randbelow(len(names)), "Test run"))
+            self.poll(names, test=True)
+            return
         self.status.set("Requesting quantum randomness…")
 
         def worker():
@@ -500,20 +508,21 @@ class Roulette:
         threading.Thread(target=worker, daemon=True).start()
         self.root.after(50, lambda: self.poll(names))
 
-    def poll(self, names):
+    def poll(self, names, test=False):
         try:
             index, source = self.queue.get_nowait()
         except queue.Empty:
-            self.root.after(50, lambda: self.poll(names))
+            self.root.after(50, lambda: self.poll(names, test))
             return
         if index is None:
             self.status.set(source)
             self.set_busy(False)
             return
-        updated = commit_winner(self.prefs, names[index], source=source)
-        if not self.save_change(updated):
-            self.set_busy(False)
-            return
+        if not test:
+            updated = commit_winner(self.prefs, names[index], source=source)
+            if not self.save_change(updated):
+                self.set_busy(False)
+                return
         self.wheel_names = names
         self.refresh_lists()
         start = self.rotation % 360
